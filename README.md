@@ -1,4 +1,4 @@
-# eth-spec-lint
+# Awesome Eth Linter
 
 LLM-powered Ethereum protocol security linter that compares consensus/execution specifications against client implementations, flagging inconsistencies and spec drift.
 
