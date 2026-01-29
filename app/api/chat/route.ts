@@ -4,7 +4,7 @@ export async function POST(req: NextRequest) {
   try {
     const { messages } = await req.json();
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY || process.env.OPEN_AI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
         { error: "OpenAI API key not configured" },

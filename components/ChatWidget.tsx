@@ -39,6 +39,8 @@ export default function ChatWidget() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [playingIndex, setPlayingIndex] = useState<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -86,6 +88,50 @@ export default function ChatWidget() {
       ]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const playTTS = async (text: string, index: number) => {
+    if (playingIndex === index) {
+      audioRef.current?.pause();
+      audioRef.current = null;
+      setPlayingIndex(null);
+      return;
+    }
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    setPlayingIndex(index);
+
+    try {
+      const response = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        setPlayingIndex(null);
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        setPlayingIndex(null);
+        audioRef.current = null;
+        URL.revokeObjectURL(url);
+      };
+
+      audio.play();
+    } catch {
+      setPlayingIndex(null);
     }
   };
 
@@ -151,6 +197,24 @@ export default function ChatWidget() {
                   }`}
                 >
                   {msg.content}
+                  {msg.role === "assistant" && (
+                    <button
+                      onClick={() => playTTS(msg.content, i)}
+                      className="mt-1 flex items-center gap-1 text-xs text-slate-500 transition-colors hover:text-purple-400"
+                      aria-label={playingIndex === i ? "Stop speaking" : "Listen to response"}
+                    >
+                      {playingIndex === i ? (
+                        <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                        </svg>
+                      ) : (
+                        <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+                        </svg>
+                      )}
+                      {playingIndex === i ? "Stop" : "Listen"}
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
